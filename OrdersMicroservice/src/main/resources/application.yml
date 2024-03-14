@@ -6,4 +6,8 @@ spring:
     name:OrdersMicroservice
   kafka:
     producer:
-      bootstrap-servers: 192.168.99.100:9092
+      bootstrap-servers: 192.168.99.100:9092,192.168.99.100:9093,192.168.99.100:9094
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      retries: 10
+      retry-backoff-ms: 1000

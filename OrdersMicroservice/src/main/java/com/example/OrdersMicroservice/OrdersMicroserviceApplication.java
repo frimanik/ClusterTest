@@ -8,9 +8,9 @@ import org.springframework.boot.builder.SpringApplicationBuilder;
 @SpringBootApplication
 public class OrdersMicroserviceApplication {
 
-	public static void main(String[] args) throws InterruptedException {
+	public static void main(String[] args) {
 		new SpringApplicationBuilder(OrdersMicroserviceApplication.class)
-				.web(WebApplicationType.NONE) // .REACTIVE, .SERVLET
+				.web(WebApplicationType.NONE)
 				.run(args);
 	}
 
