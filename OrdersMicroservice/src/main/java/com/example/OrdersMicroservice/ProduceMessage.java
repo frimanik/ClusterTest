@@ -23,7 +23,7 @@ public class ProduceMessage {
     public void sendMessage() throws InterruptedException {
         int i = 0;
         while (true) {
-            kafkaTemplate.send("new_orders", "new Order: " + i);
+            kafkaTemplate.send("new_orders", "new Order: ");
             i++;
             Thread.sleep(5000);
         }

@@ -17,7 +17,7 @@ public class ReceiveMessage {
 
     private final static String TOPIC = "sent_orders";
     private final static String BOOTSTRAP_SERVERS =
-            "192.168.99.100:9092";
+            "192.168.99.100:9092,192.168.99.100:9093,192.168.99.100:9094";
 
     @PostConstruct
     public void init() {

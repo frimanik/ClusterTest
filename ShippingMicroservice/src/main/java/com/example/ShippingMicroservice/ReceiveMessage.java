@@ -5,28 +5,32 @@ import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.serialization.LongDeserializer;
+import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.common.serialization.StringDeserializer;
+import org.apache.kafka.streams.KafkaStreams;
+import org.apache.kafka.streams.StreamsBuilder;
+import org.apache.kafka.streams.StreamsConfig;
+import org.apache.kafka.streams.kstream.KStream;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.util.Collections;
 import java.util.Properties;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Service
 public class ReceiveMessage {
 
     private final static String TOPIC = "payed_orders";
     private final static String BOOTSTRAP_SERVERS =
-            "192.168.99.100:9092";
+            "192.168.99.100:9092,192.168.99.100:9093,192.168.99.100:9094";
 
     @Autowired
     ProduceMessage produceMessage;
-
     public ReceiveMessage(ProduceMessage produceMessage) {
         this.produceMessage = produceMessage;
     }
-
 
     @PostConstruct
     public void init() {
@@ -37,43 +41,22 @@ public class ReceiveMessage {
         }
     }
 
-    private KafkaConsumer<Long, String> createConsumer() {
-        final Properties props = new Properties();
-        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG,
-                BOOTSTRAP_SERVERS);
-        props.put(ConsumerConfig.GROUP_ID_CONFIG,
-                "PaymentConsumer");
-        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG,
-                LongDeserializer.class.getName());
-        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG,
-                StringDeserializer.class.getName());
-
-        final KafkaConsumer<Long, String> consumer =
-                new KafkaConsumer<>(props);
-
-        consumer.subscribe(Collections.singletonList(TOPIC));
-        return consumer;
-    }
-
     public void runConsumer() throws InterruptedException {
-        final KafkaConsumer<Long, String> kafkaConsumer = createConsumer();
 
-        while (true) {
-            final ConsumerRecords<Long, String> consumerRecords =
-                    kafkaConsumer.poll(Duration.ofSeconds(1));
+        AtomicInteger counter = new AtomicInteger(0);
 
-            consumerRecords.forEach(record -> {
-                System.out.printf("Consumer Record:(%d, %s, %d, %d)\n",
-                        record.key(), record.value(),
-                        record.partition(), record.offset());
-                try {
-                    produceMessage.sendMessage(record.value());
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
-                }
-            });
+        Properties props = new Properties();
+        props.put(StreamsConfig.APPLICATION_ID_CONFIG, "shipmentMicroservice-streams-app");
+        props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
+        props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
+        props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass());
 
-            kafkaConsumer.commitAsync();
-        }
+        StreamsBuilder builder = new StreamsBuilder();
+        KStream<String, String> source = builder.stream("payed_orders");
+        KStream<String, String> modifiedStream = source.mapValues(value -> value + "ordinal_value "+ counter.getAndIncrement());
+        modifiedStream.to("sent_orders");
+
+        KafkaStreams streams = new KafkaStreams(builder.build(), props);
+        streams.start();
     }
 }
